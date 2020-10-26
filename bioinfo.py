@@ -6,18 +6,11 @@ Created on Sat Oct 10 08:55:11 2020
 @author: Abdel
 """
 import numpy as np
-import sympy as sym
-
-#Utilitaires d'affichage
-from IPython.display import Math, display 
-from sympy.printing.latex import latex
 
 
-
-
-
-#
-def get_edition_or_similitude_values(alignement_type,S1,S2):
+#Returns the dynamic programming table of the alignment of S1 into S2. At position [i,j], the table
+#indicates the best alignment possible as well as its metrics, for S1[:i] and S2[:j].
+def align(alignement_type,S1,S2):
     
     m = len(S1)+1
     n = len(S2)+1
@@ -53,8 +46,8 @@ def get_edition_or_similitude_values(alignement_type,S1,S2):
                 #table de distance d'edition
                 tmp = [res[i-1,j-1][1] + bool(S1[i-1]!=S2[j-1]), res[i-1,j][1] + 1, res[i,j-1][1] + 1 ]
                 min_idx = np.argmin(tmp)
-
                 
+                #D: best path from diagonal, U: best path from above, L: best path from left 
                 if min_idx == 0:
                     fleche = "D"
                 elif min_idx == 1:
@@ -67,7 +60,7 @@ def get_edition_or_similitude_values(alignement_type,S1,S2):
                 
             
             elif alignement_type == "local":
-                #table de similarite
+                #similarity table
                 
                 tmp2 = 2 if  S1[i-1]==S2[j-1] else -1
                 
@@ -89,25 +82,9 @@ def get_edition_or_similitude_values(alignement_type,S1,S2):
     
     return res
 
-#Add header to matrix  and cleans
-def clean_matrix(matrix, S1, S2):
-    
-    head = [["epsilon"] + [s for s in S2]]
-    idxs = np.transpose(np.array([["_"] + ["epsilon"] + [s for s in S1]]))
-    
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            matrix[i,j] = matrix[i,j][0] + "," + str(matrix[i,j][1])
-
-        
-    matrix = np.append(head,matrix,0)
-    matrix = np.append(idxs,matrix,1)
-    
-    return matrix
-    
 
 
-
+#Classes and functions to compute the automata found in https://link.springer.com/chapter/10.1007/3-540-60268-2_315
 
 class PretreatmentAutomataNode(object):
     
@@ -129,6 +106,7 @@ class PretreatmentAutomataNode(object):
 class PretreatementAutomata(object):
     
     def __init__(self, word, alphabet):
+        
         initial_node = PretreatmentAutomataNode([i for i in range(len(word)+1)])
         
         nodes = [initial_node]
@@ -137,11 +115,13 @@ class PretreatementAutomata(object):
         while len(done) != len(nodes): # automata dont change in size:
 
             for node in nodes:
-                if node not in done: #for each node in the automata, creates the pointors and add newly created nodes in automata
+                #for each node in the automata, creates the pointors and add newly created nodes in automata
+                if node not in done:
                         for letter in alphabet:
                             #create new node
                             new_node_colonne = [0]
                             for i in range(1,len(word)+1):
+                                #dynamic programming to get the error vector components
                                 new_node_colonne.append(min(  node.colonne[i-1] + bool(word[i-1] != letter),
                                                               node.colonne[i] + 1, 
                                                               new_node_colonne[i-1]+1))
@@ -180,9 +160,7 @@ class PretreatementAutomata(object):
         
         A = to_agraph(G)
         A.layout('dot')         
-        A.draw('multi.png')                                                        
-        
-        return A
+        A.draw('automata.png')                                                       
         
         
     
@@ -194,7 +172,7 @@ class PretreatementAutomata(object):
 P = "abaa"
 alphabet = ["a","b"]
 automata = PretreatementAutomata(P,alphabet)
-G= automata.plot()
+automata.plot()
         
         
         
